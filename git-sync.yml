@@ -3,16 +3,21 @@ kind: CronJob
 metadata:
   name: sync-git
 spec:
-  schedule: "*/0 * * * *"
+  schedule: "@hourly"
+  #not sure if we want to suspsend previous jobs
+#  concurrencyPolicy: Replace
   jobTemplate:
     spec:
       template:
         spec:
           containers:
           - name: sync-git
-            image: need-an-image
+            image: need-an-image-or-just-rhel7
+            envFrom:
+            - configMapRef:
+                name: git-urls
             args:
             - /bin/sh
             - -c
-            - git clone $GIT_URL && git pull --all && git remote add backup $GIT_BACKUP_URL && git push --all backup && echo Finished syncing
+            - echo Need to put ssh key into image? and then the rest should work using ssh urls && git clone $GIT_URL && git pull --all && git remote add backup $GIT_BACKUP_URL && git push backup --all && echo Finished syncing
           restartPolicy: OnFailure
