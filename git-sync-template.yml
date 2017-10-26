@@ -1,0 +1,147 @@
+---
+kind: "Template"
+apiVersion: "v1"
+metadata:
+  name: "scheduledjob-git-sync"
+  annotations:
+    description: "Scheduled Task to Perform Git Repo Synchronization"
+    iconClass: "icon-shadowman"
+    tags: "management,scheduledjob,git,sync"
+objects:
+- kind: Secret
+  #put the rest of the secret crap here
+  metadata:
+    name: secret-ssh-key
+  type: Opaque #maybe not?
+  data:
+    git-ssh-key: awefwefewafaewfae #this will be modified to use the file.
+- kind: ConfigMap #TODO: DON'T THINK I NEED THIS CONFIG MAP
+  metadata:
+    name: git-config
+    labels:
+      template: "scheduledjob-git-sync"
+  apiVersion: v1
+  data:
+    git-sync.yml: |
+      kind: GitSyncConfig
+      apiVersion: v1
+      url: ${GIT_URL}
+      sync-url: ${GIT_SYNC_URL}
+      insecure: true
+- kind: "ScheduledJob"
+  apiVersion: "batch/v2alpha1"
+  metadata:
+    name: "${JOB_NAME}"
+    labels:
+      template: "scheduledjob-git-sync"
+  spec:
+    schedule: "${SCHEDULE}"
+    concurrencyPolicy: "Forbid"
+    successfulJobsHistoryLimit: "${{SUCCESS_JOBS_HISTORY_LIMIT}}"
+    failedJobsHistoryLimit: "${{FAILED_JOBS_HISTORY_LIMIT}}"
+    jobTemplate:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: "${JOB_NAME}"
+                image: "openshift3/jenkins-slave-base-rhel7"
+                command:
+                  - "/bin/bash"
+                  - "-c"
+                  - "echo Need to put ssh key into image? and then the rest should work using ssh urls && git clone ${GIT_URL} && git pull --all && git remote add backup ${GIT_SYNC_URL} && git push --all backup && echo Finished syncing"
+                volumeMounts:
+                  - mountPath: "/etc/config"
+                    name: "git-sync-volume"
+            volumes:
+              - configMap:
+                  items:
+                    - key: git-sync.yml
+                      path: git-sync.yaml
+                  name: ldap-config
+                name: git-sync-volume
+            restartPolicy: "Never"
+            terminationGracePeriodSeconds: 30
+            activeDeadlineSeconds: 500
+            dnsPolicy: "ClusterFirst"
+            #TODO: SHOULDN'T NEED THESE
+            serviceAccountName: "${JOB_SERVICE_ACCOUNT}"
+            serviceAccount: "${JOB_SERVICE_ACCOUNT}"
+#TODO: DON'T THINK I NEED THE CUSTOM ROLES EITHER
+- apiVersion: v1
+  kind: ClusterRole
+  metadata:
+    name: git-syncer
+    labels:
+      template: "scheduledjob-git-sync"
+  rules:
+    - apiGroups:
+        - ""
+      resources:
+        - groups
+      verbs:
+        - get
+        - list
+        - create
+        - update
+- apiVersion: v1
+  groupNames: null
+  kind: ClusterRoleBinding
+  metadata:
+    name: system:git-syncers
+    labels:
+      template: "scheduledjob-git-sync"
+  roleRef:
+    name: git-syncer
+  subjects:
+  - kind: ServiceAccount
+    name: ${JOB_SERVICE_ACCOUNT}
+  userNames:
+  - system:serviceaccount:cluster-ops:${JOB_SERVICE_ACCOUNT}
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: ${JOB_SERVICE_ACCOUNT}
+    labels:
+      template: "scheduledjob-git-sync"
+parameters:
+  - name: "JOB_NAME"
+    displayName: "Job Name"
+    description: "Name of the Scheduled Job to Create."
+    value: "scheduledjob-git-sync"
+    required: true
+  - name: "SCHEDULE"
+    displayName: "Cron Schedule"
+    description: "Cron Schedule to Execute the Job"
+    value: "@hourly"
+    required: true
+  - name: "JOB_SERVICE_ACCOUNT"
+    displayName: "Service Account Name"
+    description: "Name of the Service Account To Exeucte the Job As."
+    value: "git-syncer"
+    required: true
+  - name: "KEEP_COMPLETE"
+    displayName: "Number of Completed Items"
+    description: "Number of completed items that will not be considered for pruning."
+    value: "5"
+    required: true
+  - name: "SUCCESS_JOBS_HISTORY_LIMIT"
+    displayName: "Successful Job History Limit"
+    description: "The number of successful jobs that will be retained"
+    value: "5"
+    required: true
+  - name: "FAILED_JOBS_HISTORY_LIMIT"
+    displayName: "Failed Job History Limit"
+    description: "The number of failed jobs that will be retained"
+    value: "5"
+    required: true
+  - name: "GIT_URL"
+    displayName: "Git Server URL"
+    description: "URL of you Git server"
+    required: true
+  - name: "GIT_SYNC_URL"
+    displayName: "Git Server URL to be synced to"
+    description: "URL of you Git server to be synced to"
+    required: true
+labels:
+  template: "scheduledjob-git-sync"
