@@ -19,5 +19,5 @@ spec:
             args:
             - /bin/sh
             - -c
-            - echo Need to put ssh key into image? and then the rest should work using ssh urls && git clone $GIT_URL && git pull --all && git remote add backup $GIT_BACKUP_URL && git push backup --all && echo Finished syncing
+            - echo Need to put ssh key into image? and then the rest should work using ssh urls && git clone $GIT_URL && git pull --all && git remote add backup $GIT_BACKUP_URL && git push --all backup && echo Finished syncing
           restartPolicy: OnFailure
