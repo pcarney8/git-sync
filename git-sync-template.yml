@@ -40,7 +40,7 @@ objects:
                 command:
                   - "/bin/bash"
                   - "-c"
-                  - "ssh-add /etc/secret-volume/ssh-privatekey && git clone ${GIT_URL} temp && cd temp && git pull --all && git remote add backup ${GIT_SYNC_URL} && git push --all backup && echo Finished syncing"
+                  - "ssh-add /etc/secret-volume/ssh-privatekey && ssh-keyscan -p ${GIT_SYNC_PORT} -H ${GIT_SYNC_HOST} >> ~/.ssh/known_hosts && git clone ${GIT_URL} temp && cd temp && git pull --all && git remote add backup ${GIT_SYNC_URL} && git push --all backup"
                 volumeMounts:
                 - name: secret-volume
                   readOnly: true
@@ -86,7 +86,7 @@ parameters:
     required: true
   - name: "GIT_SYNC_URL"
     displayName: "Git Server URL to be synced to"
-    description: "URL of you Git server to be synced to, NOTE: pleace use this format: git@github.com:githubUserName/test-repo-name.git AND make sure your public key is added to the deploy keys of this repo!"
+    description: "URL of you Git server to be synced to, NOTE: please use this format: git@github.com:githubUserName/test-repo-name.git or this format: ssh://git@gitlab.com:2222/yourUserName/test-repo-name.git AND make sure your public key is added to the deploy keys of this repo!"
     required: true
   - name: "GIT_SYNC_PRIVATE_KEY"
     displayName: "ssh private key for the Server to be synced to"
@@ -95,6 +95,14 @@ parameters:
   - name: "GIT_SYNC_PUBLIC_KEY"
     displayName: "ssh public key for the Server to be synced to"
     description: "ssh public key for the Git server to be synced to"
+    required: true
+  - name: "GIT_SYNC_PORT"
+    displayName: "port of the server to be synced to"
+    description: "port of the server to be synced to"
+    required: true
+  - name: "GIT_SYNC_HOST"
+    displayName: "host name of the server to be synced to"
+    description: "host name of the server to be synced to"
     required: true
 labels:
   template: "scheduledjob-git-sync"
