@@ -40,7 +40,7 @@ objects:
                 command:
                   - "/bin/bash"
                   - "-c"
-                  - "git clone ${GIT_URL} && git pull --all && git remote add backup ${GIT_SYNC_URL} && git push --all backup && echo Finished syncing"
+                  - "ssh-add /etc/secret-volume/ssh-privatekey && git clone ${GIT_URL} temp && cd temp && git pull --all && git remote add backup ${GIT_SYNC_URL} && git push --all backup && echo Finished syncing"
                 volumeMounts:
                 - name: secret-volume
                   readOnly: true
@@ -86,11 +86,11 @@ parameters:
     required: true
   - name: "GIT_SYNC_URL"
     displayName: "Git Server URL to be synced to"
-    description: "URL of you Git server to be synced to"
+    description: "URL of you Git server to be synced to, NOTE: pleace use this format: git@github.com:githubUserName/test-repo-name.git AND make sure your public key is added to the deploy keys of this repo!"
     required: true
   - name: "GIT_SYNC_PRIVATE_KEY"
     displayName: "ssh private key for the Server to be synced to"
-    description: "ssh private key for the Git server to be synced to"
+    description: "ssh private key for the Git server to be synced to, NOTE: no passphrase!"
     required: true
   - name: "GIT_SYNC_PUBLIC_KEY"
     displayName: "ssh public key for the Server to be synced to"
