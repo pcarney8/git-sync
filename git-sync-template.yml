@@ -9,12 +9,12 @@ metadata:
     tags: "management,scheduledjob,git,sync"
 objects:
 - kind: Secret
+  apiVersion: "v1"
   metadata:
     name: ssh-key-secret
   type: Opaque
   data:
     ssh-privatekey: ${GIT_SYNC_PRIVATE_KEY} 
-    ssh-publickey: ${GIT_SYNC_PUBLIC_KEY} 
 - kind: "ScheduledJob"
   apiVersion: "batch/v2alpha1"
   metadata:
@@ -40,7 +40,7 @@ objects:
                 command:
                   - "/bin/bash"
                   - "-c"
-                  - "ssh-add /etc/secret-volume/ssh-privatekey && ssh-keyscan -p ${GIT_SYNC_PORT} -H ${GIT_SYNC_HOST} >> ~/.ssh/known_hosts && git clone ${GIT_URL} temp && cd temp && git pull --all && git remote add backup ${GIT_SYNC_URL} && git push --all backup"
+                  - "ssh-add /etc/secret-volume/ssh-privatekey && ssh-keyscan -p ${GIT_SYNC_PORT} -H ${GIT_SYNC_HOST} >> ~/.ssh/known_hosts && git clone ${GIT_URL} temp && cd temp && git pull --all && git remote add backup ssh://git@${GIT_SYNC_HOST}:${GIT_SYNC_PORT}/${GIT_SYNC_REPO} && git push --all backup"
                 volumeMounts:
                 - name: secret-volume
                   readOnly: true
@@ -82,27 +82,28 @@ parameters:
     required: true
   - name: "GIT_URL"
     displayName: "Git Server URL"
-    description: "URL of you Git server"
+    description: "URL of your Git server, either ssh or http(s) format. This will be used to clone"
     required: true
   - name: "GIT_SYNC_URL"
-    displayName: "Git Server URL to be synced to"
+    displayName: "Git backup server URL to be synced to"
     description: "URL of you Git server to be synced to, NOTE: please use this format: git@github.com:githubUserName/test-repo-name.git or this format: ssh://git@gitlab.com:2222/yourUserName/test-repo-name.git AND make sure your public key is added to the deploy keys of this repo!"
     required: true
-  - name: "GIT_SYNC_PRIVATE_KEY"
-    displayName: "ssh private key for the Server to be synced to"
-    description: "ssh private key for the Git server to be synced to, NOTE: no passphrase!"
-    required: true
-  - name: "GIT_SYNC_PUBLIC_KEY"
-    displayName: "ssh public key for the Server to be synced to"
-    description: "ssh public key for the Git server to be synced to"
+  - name: "GIT_SYNC_HOST"
+    displayName: "Git backup server host name of the server to be synced to"
+    description: "Git backup server host name of the server to be synced to, used to add to known hosts"
     required: true
   - name: "GIT_SYNC_PORT"
-    displayName: "port of the server to be synced to"
-    description: "port of the server to be synced to"
+    displayName: "Port of the server to be synced to"
+    description: "Port of the server to be synced to, used to add to known hosts"
+    required: false
+    value: "22"
+  - name: "GIT_SYNC_REPO"
+    displayName: "Git backup server repo path"
+    description: "Git backup server repo path, i.e. userName/repo-name.git"
     required: true
-  - name: "GIT_SYNC_HOST"
-    displayName: "host name of the server to be synced to"
-    description: "host name of the server to be synced to"
+  - name: "GIT_SYNC_PRIVATE_KEY"
+    displayName: "SSH private key for the Git server to be synced to"
+    description: "SSH private key for the Git server to be synced to, NOTE: no passphrase! and should all be on one line without any headings"
     required: true
 labels:
   template: "scheduledjob-git-sync"
