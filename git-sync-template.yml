@@ -30,11 +30,11 @@ objects:
       spec:
         template:
           spec:
-           volumes:
+            volumes:
             - name: secret-volume
               secret:
                 secretName: ssh-key-secret
-           containers:
+            containers:
               - name: "${JOB_NAME}"
                 image: "openshift3/jenkins-slave-base-rhel7"
                 command:
