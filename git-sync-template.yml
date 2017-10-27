@@ -9,25 +9,12 @@ metadata:
     tags: "management,scheduledjob,git,sync"
 objects:
 - kind: Secret
-  #put the rest of the secret crap here
   metadata:
-    name: secret-ssh-key
-  type: Opaque #maybe not?
+    name: ssh-key-secret
+  type: Opaque
   data:
-    git-ssh-key: awefwefewafaewfae #this will be modified to use the file.
-- kind: ConfigMap #TODO: DON'T THINK I NEED THIS CONFIG MAP
-  metadata:
-    name: git-config
-    labels:
-      template: "scheduledjob-git-sync"
-  apiVersion: v1
-  data:
-    git-sync.yml: |
-      kind: GitSyncConfig
-      apiVersion: v1
-      url: ${GIT_URL}
-      sync-url: ${GIT_SYNC_URL}
-      insecure: true
+    ssh-privatekey: ${GIT_SYNC_PRIVATE_KEY} 
+    ssh-publickey: ${GIT_SYNC_PUBLIC_KEY} 
 - kind: "ScheduledJob"
   apiVersion: "batch/v2alpha1"
   metadata:
@@ -43,67 +30,25 @@ objects:
       spec:
         template:
           spec:
-            containers:
+           volumes:
+            - name: secret-volume
+              secret:
+                secretName: ssh-key-secret
+           containers:
               - name: "${JOB_NAME}"
                 image: "openshift3/jenkins-slave-base-rhel7"
                 command:
                   - "/bin/bash"
                   - "-c"
-                  - "echo Need to put ssh key into image? and then the rest should work using ssh urls && git clone ${GIT_URL} && git pull --all && git remote add backup ${GIT_SYNC_URL} && git push --all backup && echo Finished syncing"
+                  - "git clone ${GIT_URL} && git pull --all && git remote add backup ${GIT_SYNC_URL} && git push --all backup && echo Finished syncing"
                 volumeMounts:
-                  - mountPath: "/etc/config"
-                    name: "git-sync-volume"
-            volumes:
-              - configMap:
-                  items:
-                    - key: git-sync.yml
-                      path: git-sync.yaml
-                  name: ldap-config
-                name: git-sync-volume
+                - name: secret-volume
+                  readOnly: true
+                  mountPath: "/etc/secret-volume"
             restartPolicy: "Never"
             terminationGracePeriodSeconds: 30
             activeDeadlineSeconds: 500
             dnsPolicy: "ClusterFirst"
-            #TODO: SHOULDN'T NEED THESE
-            serviceAccountName: "${JOB_SERVICE_ACCOUNT}"
-            serviceAccount: "${JOB_SERVICE_ACCOUNT}"
-#TODO: DON'T THINK I NEED THE CUSTOM ROLES EITHER
-- apiVersion: v1
-  kind: ClusterRole
-  metadata:
-    name: git-syncer
-    labels:
-      template: "scheduledjob-git-sync"
-  rules:
-    - apiGroups:
-        - ""
-      resources:
-        - groups
-      verbs:
-        - get
-        - list
-        - create
-        - update
-- apiVersion: v1
-  groupNames: null
-  kind: ClusterRoleBinding
-  metadata:
-    name: system:git-syncers
-    labels:
-      template: "scheduledjob-git-sync"
-  roleRef:
-    name: git-syncer
-  subjects:
-  - kind: ServiceAccount
-    name: ${JOB_SERVICE_ACCOUNT}
-  userNames:
-  - system:serviceaccount:cluster-ops:${JOB_SERVICE_ACCOUNT}
-- apiVersion: v1
-  kind: ServiceAccount
-  metadata:
-    name: ${JOB_SERVICE_ACCOUNT}
-    labels:
-      template: "scheduledjob-git-sync"
 parameters:
   - name: "JOB_NAME"
     displayName: "Job Name"
@@ -142,6 +87,14 @@ parameters:
   - name: "GIT_SYNC_URL"
     displayName: "Git Server URL to be synced to"
     description: "URL of you Git server to be synced to"
+    required: true
+  - name: "GIT_SYNC_PRIVATE_KEY"
+    displayName: "ssh private key for the Server to be synced to"
+    description: "ssh private key for the Git server to be synced to"
+    required: true
+  - name: "GIT_SYNC_PUBLIC_KEY"
+    displayName: "ssh public key for the Server to be synced to"
+    description: "ssh public key for the Git server to be synced to"
     required: true
 labels:
   template: "scheduledjob-git-sync"
