@@ -36,11 +36,12 @@ objects:
                 secretName: ssh-key-secret
             containers:
               - name: "${JOB_NAME}"
-                image: "openshift3/jenkins-slave-base-rhel7"
+                #image: "registry.access.redhat.com/rhel7:latest"
+                image: "openshift3/jenkins-2-rhel7"
                 command:
                   - "/bin/bash"
                   - "-c"
-                  - "mkdir ~/.ssh && echo made dir && printf 'host ${GIT_SYNC_HOST}\n HostName ${GIT_SYNC_HOST}\n IdentityFile /etc/secret-volume/ssh-privatekey\n User git\n' >> ~/.ssh/config && printf 'host ${GIT_HOST}\n HostName ${GIT_HOST}\n User jenkins\n' >> ~/.ssh/config && echo created cofig && chmod 400 ~/.ssh/config && echo completed chmod && ssh-keyscan -p ${GIT_SYNC_PORT} -H ${GIT_SYNC_HOST} >> ~/.ssh/known_hosts && echo git sync added to known_hosts && ssh-keyscan -p ${GIT_PORT} -H ${GIT_HOST} >> ~/.ssh/known_hosts && echo finished keyscan && git clone ssh://git@${GIT_HOST}:${GIT_PORT}/${GIT_REPO} /tmp/temp && echo finished cloning && cd /tmp/temp && git pull --all && git remote add backup ssh://git@${GIT_SYNC_HOST}:${GIT_SYNC_PORT}/${GIT_SYNC_REPO} && echo added backup && git push --all backup && echo finished"
+                  - "mkdir ~/.ssh && echo made dir && printf 'host ${GIT_SYNC_HOST}\n HostName ${GIT_SYNC_HOST}\n IdentityFile /etc/secret-volume/ssh-privatekey\n User git\n' >> ~/.ssh/config && echo created cofig && chmod 400 ~/.ssh/config && echo completed chmod && ssh-keyscan -p ${GIT_SYNC_PORT} -H ${GIT_SYNC_HOST} >> ~/.ssh/known_hosts && echo git sync added to known_hosts && ssh-keyscan -p ${GIT_PORT} -H ${GIT_HOST} >> ~/.ssh/known_hosts && echo finished keyscan && git clone https://pcarney8@${GIT_HOST}/${GIT_REPO} /tmp/temp && echo finished cloning && cd /tmp/temp && git pull --all && git remote add backup ssh://git@${GIT_SYNC_HOST}:${GIT_SYNC_PORT}/${GIT_SYNC_REPO} && echo added backup && git push --all backup && echo finished"
                 volumeMounts:
                 - name: secret-volume
                   readOnly: true
@@ -81,9 +82,8 @@ parameters:
     required: true
   - name: "GIT_PORT"
     displayName: "Port of the main git server"
-    description: "Port of the main git server"
+    description: "Port of the main git server, NEED TO MAKE SURE THIS MATCHES THE PROTOCOL"
     required: true 
-    value: "22"
   - name: "GIT_REPO"
     displayName: "Git server repo path"
     description: "Git server repo path, i.e. userName/repo-name.git"
