@@ -103,7 +103,8 @@ parameters:
   - name: "GIT_PORT"
     displayName: "Port of the main git server"
     description: "Port of the main git server, NEED TO MAKE SURE THIS MATCHES THE PROTOCOL"
-    required: true 
+    required: true
+    value: "22" 
   - name: "GIT_REPO"
     displayName: "Git server repo path"
     description: "Git server repo path, i.e. userName/repo-name.git"
