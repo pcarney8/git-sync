@@ -3,3 +3,4 @@ echo $JOB
 oc delete job $JOB
 oc delete scheduledjob/scheduledjob-git-sync
 oc delete template scheduledjob-git-sync
+oc delete secret ssh-key-secret
