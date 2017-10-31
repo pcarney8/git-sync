@@ -123,7 +123,7 @@ parameters:
     required: true
   - name: "GIT_PRIVATE_KEY"
     displayName: "SSH private key for the Git server to be synced to"
-    description: "SSH private key for the Git server to be synced to, NOTE: no passphrase! and make sure it is encoded! You can do this by manually adding via the UI and then revealing the secret, it will be encoded and you can use that"
+    description: "SSH private key for the Git server to be synced to, NOTE: no passphrase! and make sure it is encoded! You can do this by manually adding via the UI and then go to the secret and click 'Edit YAML', this will show the encoded secret under 'data: ssh-privatekey:' you don't need to include the '>-'"
     required: true
 labels:
   template: "scheduledjob-git-sync"
