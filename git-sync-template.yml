@@ -11,7 +11,7 @@ objects:
 - kind: Secret
   apiVersion: "v1"
   metadata:
-    name: ssh-key-secret
+    name: "${SSH_KEY_SECRET_NAME}"
   type: Opaque
   data:
     ssh-privatekey: ${GIT_PRIVATE_KEY} 
@@ -59,8 +59,8 @@ objects:
                     echo "root:x:${GROUP_ID}:" > ~/group
                     LD_PRELOAD=libnss_wrapper.so NSS_WRAPPER_PASSWD=~/passwd NSS_WRAPPER_GROUP=~/group git clone ssh://git@${GIT_HOST}:${GIT_PORT}/${GIT_REPO} /tmp/temp
                     cd /tmp/temp
-                    git pull --all
-                    git remote add backup ssh://git@${GIT_SYNC_HOST}:${GIT_SYNC_PORT}/${GIT_SYNC_REPO}
+                    for branch in $(git branch -a | grep remotes | grep -v HEAD | grep -v master); do git branch --track ${branch#remotes/origin/} $branch; done
+                    LD_PRELOAD=libnss_wrapper.so NSS_WRAPPER_PASSWD=~/passwd NSS_WRAPPER_GROUP=~/group git remote add backup ssh://git@${GIT_SYNC_HOST}:${GIT_SYNC_PORT}/${GIT_SYNC_REPO}
                     LD_PRELOAD=libnss_wrapper.so NSS_WRAPPER_PASSWD=~/passwd NSS_WRAPPER_GROUP=~/group git push -f --all backup
                 volumeMounts:
                 - name: secret-volume
@@ -126,5 +126,10 @@ parameters:
     displayName: "SSH private key for the Git server to be synced to"
     description: "SSH private key for the Git server to be synced to, NOTE: no passphrase! and make sure it is encoded! You can do this by manually adding via the UI and then go to the secret and click 'Edit YAML', this will show the encoded secret under 'data: ssh-privatekey:' you don't need to include the '>-'"
     required: true
+  - name: "SSH_KEY_SECRET_NAME"
+    displayName: "Name of the ssh key secret"
+    description: "Name of the ssh key secret"
+    required: true
+    value: "ssh-key-secret"
 labels:
   template: "scheduledjob-git-sync"

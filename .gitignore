@@ -1,2 +1,5 @@
 params.txt
 params/
+
+.idea/
+*.iml
