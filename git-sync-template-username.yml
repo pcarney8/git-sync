@@ -1,0 +1,107 @@
+---
+kind: "Template"
+apiVersion: "v1"
+metadata:
+  name: "scheduledjob-git-sync"
+  annotations:
+    description: "Scheduled Task to Perform Git Repo Synchronization"
+    iconClass: "icon-shadowman"
+    tags: "management,scheduledjob,git,sync"
+objects:
+- kind: Secret
+  apiVersion: "v1"
+  metadata:
+    name: ssh-key-secret
+  type: Opaque
+  stringData:
+    username: ${GIT_USERNAME}
+    password: ${GIT_PASSWORD}
+    sync-username: ${GIT_SYNC_USERNAME} 
+    sync-password: ${GIT_SYNC_PASSWORD} 
+- kind: "ScheduledJob"
+  apiVersion: "batch/v2alpha1"
+  metadata:
+    name: "${JOB_NAME}"
+    labels:
+      template: "scheduledjob-git-sync"
+  spec:
+    schedule: "${SCHEDULE}"
+    concurrencyPolicy: "Forbid"
+    successfulJobsHistoryLimit: "${{SUCCESS_JOBS_HISTORY_LIMIT}}"
+    failedJobsHistoryLimit: "${{FAILED_JOBS_HISTORY_LIMIT}}"
+    jobTemplate:
+      spec:
+        template:
+          spec:
+            volumes:
+            - name: secret-volume
+              secret:
+                secretName: ssh-key-secret
+            containers:
+              - name: "${JOB_NAME}"
+                image: "openshift3/jenkins-slave-base-rhel7"
+                command:
+                  - "/bin/bash"
+                  - "-c"
+                  - "git clone https://${GIT_USERNAME}:${GIT_PASSWORD}:password@${GIT_URL} ~/temp && echo finished cloning && cd ~/temp && git pull --all && git remote add backup https:ssh://git@${GIT_SYNC_HOST}:${GIT_SYNC_PORT}/${GIT_SYNC_REPO} && echo added backup && git push --all backup && echo finished"
+                volumeMounts:
+                - name: secret-volume
+                  readOnly: true
+                  mountPath: "/etc/secret-volume"
+            restartPolicy: "Never"
+            terminationGracePeriodSeconds: 30
+            activeDeadlineSeconds: 500
+            dnsPolicy: "ClusterFirst"
+parameters:
+  - name: "JOB_NAME"
+    displayName: "Job Name"
+    description: "Name of the Scheduled Job to Create."
+    value: "scheduledjob-git-sync"
+    required: true
+  - name: "SCHEDULE"
+    displayName: "Cron Schedule"
+    description: "Cron Schedule to Execute the Job"
+    value: "@hourly"
+    required: true
+  - name: "KEEP_COMPLETE"
+    displayName: "Number of Completed Items"
+    description: "Number of completed items that will not be considered for pruning."
+    value: "5"
+    required: true
+  - name: "SUCCESS_JOBS_HISTORY_LIMIT"
+    displayName: "Successful Job History Limit"
+    description: "The number of successful jobs that will be retained"
+    value: "5"
+    required: true
+  - name: "FAILED_JOBS_HISTORY_LIMIT"
+    displayName: "Failed Job History Limit"
+    description: "The number of failed jobs that will be retained"
+    value: "5"
+    required: true
+  - name: "GIT_URL"
+    displayName: "Git Server URL"
+    description: "URL of your Git server, either ssh or http(s) format. This will be used to clone"
+    required: true
+  - name: "GIT_SYNC_URL"
+    displayName: "Git backup server URL to be synced to"
+    description: "URL of you Git server to be synced to, NOTE: please use this format: git@github.com:githubUserName/test-repo-name.git or this format: ssh://git@gitlab.com:2222/yourUserName/test-repo-name.git AND make sure your public key is added to the deploy keys of this repo!"
+    required: true
+  - name: "GIT_SYNC_HOST"
+    displayName: "Git backup server host name of the server to be synced to"
+    description: "Git backup server host name of the server to be synced to, used to add to known hosts"
+    required: true
+  - name: "GIT_SYNC_PORT"
+    displayName: "Port of the server to be synced to"
+    description: "Port of the server to be synced to, used to add to known hosts"
+    required: false
+    value: "22"
+  - name: "GIT_SYNC_REPO"
+    displayName: "Git backup server repo path"
+    description: "Git backup server repo path, i.e. userName/repo-name.git"
+    required: true
+  - name: "GIT_SYNC_PRIVATE_KEY"
+    displayName: "SSH private key for the Git server to be synced to"
+    description: "SSH private key for the Git server to be synced to, NOTE: no passphrase! and should all be on one line without any headings"
+    required: true
+labels:
+  template: "scheduledjob-git-sync"
